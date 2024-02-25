@@ -7,7 +7,6 @@ from jsque.ast import (
     QueryTerm,
     Identifier,
     IndexExpr,
-    Wildcard,
 )
 from jsque.lexer import tokenize, TokenType
 

@@ -4,8 +4,6 @@ from jsque import ast
 def format_jsque_expression(query: ast.QueryTerm) -> str:
     if isinstance(query, ast.Root):
         return "@"
-    elif isinstance(query, ast.Wildcard):
-        return "*"
     elif isinstance(query, ast.Index):
         return str(query.number)
     elif isinstance(query, ast.IndexExpr):

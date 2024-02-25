@@ -17,33 +17,24 @@ from abc import abstractmethod
 from typing import Any
 
 
-def value(__obj: Any) -> bool:
-    return bool(getattr(__obj, "__value__", False))
+def buffered(__obj: Any) -> bool:
+    return bool(getattr(__obj, "__buffered__", False))
 
 
 class QueryTerm:
-    __value__: bool
+    __buffered__: bool = False
 
     @abstractmethod
     def dict(self) -> dict: ...
 
 
 class Root(QueryTerm):
-    __value__ = True
 
     def dict(self):
         return {"type": "root"}
 
 
-class Wildcard(QueryTerm):
-    __value__ = True
-
-    def dict(self) -> dict:
-        return {"type": "wild"}
-
-
 class Index(QueryTerm):
-    __value__ = True
     number: int
 
     def __init__(self, number: int):
@@ -54,7 +45,6 @@ class Index(QueryTerm):
 
 
 class Identifier(QueryTerm):
-    __value__ = True
     key: str
 
     def __init__(self, key: str):
@@ -65,7 +55,6 @@ class Identifier(QueryTerm):
 
 
 class IndexExpr(QueryTerm):
-    __value__ = False
     sequence: QueryTerm
     item: Index
 
@@ -87,7 +76,7 @@ class IndexExpr(QueryTerm):
 
 
 class MemberMapExpr(QueryTerm):
-    __value__ = False
+    __buffered__ = True
     sequence: QueryTerm
 
     def __init__(self, sequence: QueryTerm):
@@ -103,7 +92,6 @@ class MemberMapExpr(QueryTerm):
 
 
 class SubExpr(QueryTerm):
-    __value__ = False
     parent: QueryTerm
     child: Identifier
 
@@ -127,7 +115,7 @@ class SubExpr(QueryTerm):
 
 
 class ChildMapExpr(QueryTerm):
-    __value__ = False
+    __buffered__ = True
     parent: QueryTerm
 
     def __init__(self, parent: QueryTerm):

@@ -1,8 +1,6 @@
 import string
-from typing import Type
-from hypothesis import given, strategies as st
+from hypothesis import strategies as st
 from hypothesis.strategies._internal.core import DrawFn
-import pytest
 from jsque import ast
 
 
@@ -14,10 +12,6 @@ def jsque_identifiers() -> st.SearchStrategy[ast.QueryTerm]:
             min_size=1,
         ),
     )
-
-
-def jsque_wildcard() -> st.SearchStrategy[ast.QueryTerm]:
-    return st.just(ast.Wildcard())
 
 
 def jsque_indices() -> st.SearchStrategy[ast.QueryTerm]:
