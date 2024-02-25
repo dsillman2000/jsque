@@ -1,16 +1,15 @@
 """
+`@.event_type.*[*]`
 
-`event_type.*[*]`
-
-type: idx_op
+type: mmap_op
 children:
-- type: sub_op
+- type: cmap_op
   children:
-  - type: identifier
-    value: event_type
-  - type: wild
-- type: wild
-
+  - type: sub_op
+    children:
+    - type: root
+    - type: identifier
+      value: event_type
 """
 
 from abc import abstractmethod
