@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "jsque"
+version = "0.1.0"
+description = ""
+authors = ["dsillman2000 <dsillman2000@yahoo.com>"]
+readme = "README.md"
+packages = [{ include = "jsque" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pyyaml = "^6.0.1"
+
+[tool.poetry.scripts]
+main = "jsque.cli:main"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.2"
+hypothesis = "^6.98.11"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
