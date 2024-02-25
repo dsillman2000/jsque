@@ -60,7 +60,8 @@ def main():
         import yaml
 
         subject = yaml.safe_load(arguments.input)
-        _result = ast.to_pipeline(parsed_ast).eval(subject)
+        result_obj = ast.to_pipeline(parsed_ast).eval(subject)
+        _result = yaml.safe_dump(result_obj, sort_keys=False)
     elif arguments.cmd in ("parse", "format"):
         try:
             parsed_ast = parser.parse_jsque_expression(arguments.input)

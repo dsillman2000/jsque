@@ -18,7 +18,10 @@ class Index(Injection):
 
     def eval(self, x: Any) -> Any:
         if not hasattr(x, "__getitem__"):
-            raise Exception("IndexExpr sequence must support __getitem__.")
+            raise Exception(
+                "IndexExpr sequence must support __getitem__.\nCannot index into %s: %r"
+                % (type(x).__name__, x)
+            )
         try:
             return x[self.number]
         except Exception:
@@ -31,7 +34,10 @@ class Sub(Injection):
 
     def eval(self, x: Any) -> Any:
         if not hasattr(x, "__getitem__"):
-            raise Exception("SubExpr parent must support __getitem__.")
+            raise Exception(
+                "SubExpr parent must support __getitem__.\nCannot lookup into %s: %r"
+                % (type(x).__name__, x)
+            )
         try:
             return x[self.key]
         except Exception:
