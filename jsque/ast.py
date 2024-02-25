@@ -14,11 +14,11 @@ children:
 """
 
 from abc import abstractmethod
-from typing import Any
+from typing import Any, ClassVar
 from jsque import pipeline as pipe
 
 
-class QueryTerm:
+class DictIsomorphism:
     @abstractmethod
     def dict(self) -> dict: ...
 
@@ -27,53 +27,77 @@ class QueryTerm:
     def fromdict(cls, d: "dict"): ...
 
 
+class QueryTerm(DictIsomorphism):
+    _registry: ClassVar = {}
+    type: str
+    value: Any
+    children: list["QueryTerm"]
+
+    def __init__(self, type: str, value: Any = None, children: list["QueryTerm"] = []):
+        self.type = type
+        self.value = value
+        self.children = children
+
+    @classmethod
+    def register(cls, name: str):
+        def decorator(subclass):
+            cls._registry[name] = subclass
+            return subclass
+
+        return decorator
+
+    def dict(self) -> dict:
+        d: dict[str, Any] = {"type": self.type}
+        if self.value is not None:
+            d["value"] = self.value
+        if self.children:
+            d["children"] = list(map(lambda _d: _d.dict(), self.children))
+        return d
+
+    @classmethod
+    def fromdict(cls, d: "dict") -> "QueryTerm":
+        assert d.get("type") in cls._registry
+        _root_cls = cls._registry[d["type"]]
+        if children := d.get("children"):
+            children = list(map(lambda _d: cls.fromdict(_d), children))
+            if value := d.get("value"):
+                return _root_cls(value, children)
+            return _root_cls(*children)
+        if value := d.get("value"):
+            return _root_cls(value)
+        return _root_cls()
+
+
 class QueryExpr(QueryTerm):
     @abstractmethod
     def pipe(self) -> pipe.Pipe: ...
 
 
+@QueryTerm.register("root")
 class Root(QueryTerm):
-
-    def dict(self):
-        return {"type": "root"}
-
-    @classmethod
-    def fromdict(cls, d: "dict"):
-        assert d.get("type") == "root"
-        return cls()
+    def __init__(self):
+        super().__init__("root")
 
 
 QueryOperand = Root | QueryExpr
 
 
+@QueryTerm.register("index")
 class Index(QueryTerm):
     number: int
 
     def __init__(self, number: int):
+        super().__init__("index", number)
         self.number = number
 
-    def dict(self) -> dict:
-        return {"type": "index", "value": self.number}
 
-    @classmethod
-    def fromdict(cls, d: "dict"):
-        assert d.get("type") == "index"
-        return cls(d["value"])
-
-
+@QueryTerm.register("identifier")
 class Identifier(QueryTerm):
     key: str
 
     def __init__(self, key: str):
+        super().__init__("identifier", key)
         self.key = key
-
-    def dict(self):
-        return {"type": "identifier", "value": self.key}
-
-    @classmethod
-    def fromdict(cls, d: "dict"):
-        assert d.get("type") == "identifier"
-        return cls(d["value"])
 
 
 def primary_expr_class(d: "dict") -> "type":
@@ -86,6 +110,7 @@ def primary_expr_class(d: "dict") -> "type":
     }[d["type"]]
 
 
+@QueryTerm.register("idx_op")
 class IndexExpr(QueryExpr):
     sequence: QueryOperand
     item: Index
@@ -93,58 +118,27 @@ class IndexExpr(QueryExpr):
     def __init__(self, sequence: QueryOperand, item: Index):
         if not isinstance(item, Index):
             raise IndexError("Bad index argument supplied: %r\n\nMust be Index." % item)
-
+        super().__init__("idx_op", children=[sequence, item])
         self.sequence = sequence
         self.item = item
-
-    def dict(self):
-        return {
-            "type": "idx_op",
-            "children": [
-                self.sequence.dict(),
-                self.item.dict(),
-            ],
-        }
-
-    @classmethod
-    def fromdict(cls, d: "dict"):
-        assert d.get("type") == "idx_op"
-        sequence = d["children"][0]
-        sequence_cls = primary_expr_class(sequence)
-        return cls(
-            sequence_cls.fromdict(sequence),
-            Index.fromdict(d["children"][1]),
-        )
 
     def pipe(self) -> pipe.Injection:
         return pipe.Index(self.item.number)
 
 
+@QueryTerm.register("mmap_op")
 class MemberMapExpr(QueryExpr):
     sequence: QueryOperand
 
     def __init__(self, sequence: QueryOperand):
+        super().__init__("mmap_op", children=[sequence])
         self.sequence = sequence
-
-    def dict(self) -> dict:
-        return {
-            "type": "mmap_op",
-            "children": [
-                self.sequence.dict(),
-            ],
-        }
-
-    @classmethod
-    def fromdict(cls, d: "dict"):
-        assert d.get("type") == "mmap_op"
-        sequence = d["children"][0]
-        sequence_cls = primary_expr_class(sequence)
-        return cls(sequence_cls.from_dict(sequence))
 
     def pipe(self) -> pipe.Surjection:
         return pipe.MemberMap()
 
 
+@QueryTerm.register("sub_op")
 class SubExpr(QueryExpr):
     parent: QueryOperand
     child: Identifier
@@ -154,53 +148,22 @@ class SubExpr(QueryExpr):
             raise AttributeError(
                 "Bad sub-argument supplied: %r\n\nMust be Identifier." % child
             )
+        super().__init__("sub_op", children=[parent, child])
 
         self.parent = parent
         self.child = child
-
-    def dict(self) -> dict:
-        return {
-            "type": "sub_op",
-            "children": [
-                self.parent.dict(),
-                self.child.dict(),
-            ],
-        }
-
-    @classmethod
-    def fromdict(cls, d: "dict"):
-        assert d.get("type") == "sub_op"
-        parent = d["children"][0]
-        parent_cls = primary_expr_class(parent)
-        return cls(
-            parent_cls.fromdict(parent),
-            Identifier.fromdict(d["children"][1]),
-        )
 
     def pipe(self) -> pipe.Injection:
         return pipe.Sub(self.child.key)
 
 
+@QueryTerm.register("cmap_op")
 class ChildMapExpr(QueryExpr):
     parent: QueryOperand
 
     def __init__(self, parent: QueryOperand):
+        super().__init__("cmap_op", children=[parent])
         self.parent = parent
-
-    def dict(self) -> dict:
-        return {
-            "type": "cmap_op",
-            "children": [
-                self.parent.dict(),
-            ],
-        }
-
-    @classmethod
-    def fromdict(cls, d: "dict"):
-        assert d.get("type") == "cmap_op"
-        parent = d["children"][0]
-        parent_cls = primary_expr_class(parent)
-        return cls(parent_cls.fromdict(parent))
 
     def pipe(self) -> pipe.Surjection:
         return pipe.ChildMap()
