@@ -46,6 +46,8 @@ def parse_jsque_expression(source: str) -> QueryTerm:
                         expr = SubExpr(expr, Identifier(inner.value))
                     case TokenType.Wildcard:
                         expr = ChildMapExpr(expr)
+                    case other:
+                        raise Exception("Bad sub expression argument. Got: %r" % other)
             case _:
                 raise Exception("Unexpected token: %r" % op_token)
 
