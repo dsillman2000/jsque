@@ -1,0 +1,12 @@
+type: sub_op
+children:
+- type: mmap_op
+  children:
+  - type: sub_op
+    children:
+    - type: root
+    - type: identifier
+      value: name
+- type: identifier
+  value: confirmed
+

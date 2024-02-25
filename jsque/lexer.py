@@ -4,6 +4,8 @@ import string
 
 
 class TokenType(Enum):
+    """Different types of tokens in jsque."""
+
     Identifier = "identifier"
     Wildcard = "wild"
     SubOp = "sub_op"
@@ -14,6 +16,22 @@ class TokenType(Enum):
 
 
 class Token:
+    """Object for storing a token string, with its associated type.
+
+    Classmethods:
+
+    - root: Create a root token.
+    - identifier: Create an identifier token.
+      args: v: str (the identifier string to store in the token)
+    - sub_op: Create a sub_op token.
+    - wildcard: Create a wildcard token.
+    - left_bracket: Create a left_bracket token.
+    - right_bracket: Create a right_bracket token.
+    - index: Create an index token.
+      args: v: str (the index string to store in the token)
+
+    """
+
     type: TokenType
     value: str
 
@@ -50,6 +68,7 @@ class Token:
         return cls(TokenType.Index, v)
 
     def __repr__(self) -> str:
+        """Human-readable representation of the token."""
         return f'{self.type.value.upper()}("{self.value}")'
 
 
@@ -57,6 +76,15 @@ IDENTIFIER_TERMINATORS = [".", "["] + list(string.whitespace)
 
 
 def next_identifier(source: str, start_idx: int) -> str:
+    """Consume from `source`, starting at index `start_idx`, until the identifier is terminated.
+
+    Args:
+        source (str): Source string to consume from
+        start_idx (int): Index in string to start consuming from
+
+    Returns:
+        str: Consumed identifier name
+    """
     ident: str = ""
     idx = start_idx
     while idx < len(source):
@@ -68,6 +96,15 @@ def next_identifier(source: str, start_idx: int) -> str:
 
 
 def next_index(source: str, start_idx: int) -> str:
+    """Consume from `source`, starting at index `start_idx`, until the index is terminated.
+
+    Args:
+        source (str): Source string to consume from
+        start_idx (int): Index in string to start consuming from
+
+    Returns:
+        str: Consumed index string
+    """
     num: str = ""
     idx = start_idx
     while idx < len(source) and source[idx] in string.digits + "-":
@@ -76,7 +113,23 @@ def next_index(source: str, start_idx: int) -> str:
     return num
 
 
+class LexerException(Exception):
+    pass
+
+
 def tokenize(source: str) -> list[Token]:
+    """Tokenize a jsque query string.
+
+    Args:
+        source (str): Source string to tokenize
+
+    Raises:
+        LexerException: If an unexpected character is encountered during tokenization
+
+    Returns:
+        list[Token]: List of jsque tokens parsed from the source string.
+    """
+
     tokens = []
     idx = 0
 
@@ -114,7 +167,7 @@ def tokenize(source: str) -> list[Token]:
             idx += len(index)
             tokens += [Token.index(index)]
         else:
-            raise ValueError(
+            raise LexerException(
                 "Unexpected character encountered during tokenize: %s" % char_i
             )
 

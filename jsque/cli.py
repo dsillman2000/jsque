@@ -3,7 +3,15 @@ from pathlib import Path
 from typing import Any
 
 
-def input_subparsers(parser: argparse.ArgumentParser):
+def input_subparsers(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    """Enriches a command's subparser with -f and -s arguments for options to pass input.
+
+    Args:
+        parser (argparse.ArgumentParser): Subparser to enrich.
+
+    Returns:
+        argparse.ArgumentParser: Enriched subparser.
+    """
     parser.add_argument(
         "-f", "--file", type=Path, help="(input) from file", dest="input"
     )
@@ -13,7 +21,16 @@ def input_subparsers(parser: argparse.ArgumentParser):
     return parser
 
 
+class CLIException(Exception):
+    pass
+
+
 def main():
+    """Main entrypoint for jsque CLI.
+
+    Raises:
+        CLIException: If the command is not recognized, or if the input is not provided.
+    """
 
     argparser = argparse.ArgumentParser(description="jsque CLI")
     cmd_subparser = argparser.add_subparsers(title="cmd", dest="cmd")
@@ -39,20 +56,26 @@ def main():
         "-q", type=str, help="jsque query expression", required=True, dest="query"
     )
 
+    # parse args
     arguments = argparser.parse_args()
 
     if not arguments.cmd:
-        raise Exception("cmd required")
+        raise CLIException("cmd required")
 
     from jsque import ast, parser
 
     parsed_ast: ast.QueryTerm
 
     if not arguments.input:
-        raise Exception("input required")
+        raise CLIException("input required")
 
+    # Initialize _result buffer
     _result: Any
+
+    # if input is file, parse contents of file.
     if isinstance(arguments.input, Path):
+        if not arguments.input.exists():
+            raise CLIException("Could not find input file: %s" % arguments.input)
         arguments.input = arguments.input.read_text()
 
     if arguments.cmd == "eval":
@@ -80,6 +103,6 @@ def main():
 
             _result = format.format_jsque_expression(parsed_ast)
     else:
-        raise Exception("unexpected cmd: %r" % arguments.cmd)
+        raise CLIException("unexpected cmd: %r" % arguments.cmd)
 
     print(_result)
